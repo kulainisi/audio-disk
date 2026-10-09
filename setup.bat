@@ -2,6 +2,9 @@
 setlocal EnableDelayedExpansion
 chcp 65001 >nul
 cd /d "%~dp0"
+set "ROOT=%~dp0"
+rem uv 的备用安装位置（用 pip --target 装在项目里，不改动系统 Python）
+set "LOCAL_UV=%ROOT%.tools\uv"
 set "PIP_MIRROR=https://mirrors.aliyun.com/pypi/simple"
 set "PY_MIRROR=https://registry.npmmirror.com/-/binary/python-build-standalone"
 
@@ -36,8 +39,6 @@ if not defined UV (
   if errorlevel 1 (
     echo 当前 uv !UV_VER! 版本过旧，正在升级 ...
     "!UV!" self update >nul 2>nul
-    call :check_uv || python -m pip install -U uv -i %PIP_MIRROR% >nul 2>nul
-    call :find_uv
     call :check_uv || call :install_uv
   )
 )
@@ -56,12 +57,12 @@ if defined UV_PYTHON (
   echo [3/5] 使用本机 Python，跳过下载
 ) else (
   echo [3/5] 安装 Python（版本见 .python-version）...
-  "!UV!" python install
+  "!UV!" python install --no-bin --no-registry
 )
 if errorlevel 1 (
   echo 从 GitHub 下载 Python 失败，改用国内镜像重试 ...
   set "UV_PYTHON_INSTALL_MIRROR=%PY_MIRROR%"
-  "!UV!" python install || (echo Python 安装失败，请检查网络后重新运行 setup.bat & pause & exit /b 1)
+  "!UV!" python install --no-bin --no-registry || (echo Python 安装失败，请检查网络后重新运行 setup.bat & pause & exit /b 1)
 )
 
 echo [4/5] 安装依赖（第一次需要下载约 5GB，请耐心等待）...
@@ -86,6 +87,8 @@ exit /b 0
 rem ---- 查找 uv：优先使用官方安装器装到 %USERPROFILE%\.local\bin 的版本 ----
 :find_uv
 set "UV="
+if exist "%LOCAL_UV%\bin\uv.exe" (set "UV=%LOCAL_UV%\bin\uv.exe" & exit /b 0)
+if exist "%LOCAL_UV%\Scripts\uv.exe" (set "UV=%LOCAL_UV%\Scripts\uv.exe" & exit /b 0)
 if exist "%USERPROFILE%\.local\bin\uv.exe" (set "UV=%USERPROFILE%\.local\bin\uv.exe" & exit /b 0)
 for /f "delims=" %%p in ('where uv 2^>nul') do if not defined UV set "UV=%%p"
 exit /b 0
@@ -104,6 +107,9 @@ exit /b 1
 rem ---- 用官方安装器安装最新 uv ----
 :install_uv
 powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
-if errorlevel 1 python -m pip install -U uv -i %PIP_MIRROR%
+call :find_uv
+call :check_uv && exit /b 0
+echo 官方安装器下载失败，改用 pip 镜像把 uv 装到项目的 .tools 文件夹 ...
+python -m pip install --target "%LOCAL_UV%" --upgrade uv -i %PIP_MIRROR%
 call :find_uv
 exit /b 0

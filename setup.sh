@@ -7,8 +7,8 @@ command -v uv >/dev/null || pip install -U uv
 uv self update 2>/dev/null || pip install -U uv
 [ -d index-tts ] || git clone https://github.com/index-tts/index-tts.git
 cd index-tts
-uv python install || \
-  UV_PYTHON_INSTALL_MIRROR=https://registry.npmmirror.com/-/binary/python-build-standalone uv python install
+uv python install --no-bin || \
+  UV_PYTHON_INSTALL_MIRROR=https://registry.npmmirror.com/-/binary/python-build-standalone uv python install --no-bin
 uv sync --extra webui --default-index "${PIP_INDEX:-https://mirrors.aliyun.com/pypi/simple}"
 [ -f checkpoints/config.yaml ] || uv run --extra webui modelscope download --model IndexTeam/IndexTTS-2.5 --local_dir checkpoints
 uv run --extra webui tools/gpu_check.py

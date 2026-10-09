@@ -6,3 +6,5 @@
 __pycache__/
 # setup.bat 记录的本机 Python 路径
 /python-path.txt
+# setup.bat 备用安装的 uv
+/.tools/

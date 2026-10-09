@@ -27,6 +27,15 @@
 
 Linux 下对应的是 `./setup.sh` 和 `./start.sh`。
 
+### 不影响本机已有的 Python
+
+安装过程不会改动你电脑上原有的 Python 和其中的包：
+
+- IndexTTS 需要 Python 3.10 或 3.11。`setup.bat` 会用 uv 单独下载一份 Python 3.11，放在 uv 自己的目录里，并加上 `--no-bin --no-registry` 参数，所以不会加入 PATH，也不会写入注册表，命令行里的 `python` 仍然是你原来的版本。
+- 所有依赖（包括 PyTorch）都安装在 `index-tts\.venv` 这个独立环境里。
+- 如果需要 pip 来安装 uv，会用 `--target` 装到项目的 `.tools` 文件夹，而不是装进系统 Python。
+- 不想用了，直接删除整个项目文件夹即可；uv 下载的 Python 可以用 `uv python uninstall 3.11` 删除。
+
 ### 使用本机已有的 Python
 
 如果电脑上已经装了 Python 3.10 或 3.11，可以在命令提示符里运行（参数可以是 Python 文件夹，也可以是 python.exe 的路径）：
