@@ -27,6 +27,18 @@
 
 Linux 下对应的是 `./setup.sh` 和 `./start.sh`。
 
+### 使用本机已有的 Python
+
+如果电脑上已经装了 Python 3.10 或 3.11，可以在命令提示符里运行（参数可以是 Python 文件夹，也可以是 python.exe 的路径）：
+
+```
+setup.bat F:\python
+```
+
+这样就不用再下载 Python。路径会记在 `python-path.txt` 里，`start.bat` 会自动使用它。
+
+注意：IndexTTS 需要指定版本的 PyTorch（2.8 + CUDA 12.8）和配套依赖，这些仍然会安装到 `index-tts\.venv` 这个独立环境里，不会改动你本机 Python 里已有的包。所以本机 Python 里的 torch 不会被复用。
+
 > 第一次启动时，IndexTTS 还会自动下载几个小模型。启动脚本已默认使用 `hf-mirror.com` 镜像，如需改回官方源，先设置环境变量 `HF_ENDPOINT=https://huggingface.co`。
 
 ## 让声音更自然的建议

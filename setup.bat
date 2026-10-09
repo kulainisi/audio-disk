@@ -5,6 +5,25 @@ cd /d "%~dp0"
 set "PIP_MIRROR=https://mirrors.aliyun.com/pypi/simple"
 set "PY_MIRROR=https://registry.npmmirror.com/-/binary/python-build-standalone"
 
+rem 可选：使用本机已有的 Python（必须是 3.10 或 3.11），例如：setup.bat F:\python
+rem 用过一次后路径会记在 python-path.txt 里，start.bat 也会使用它
+set "LOCAL_PY="
+if not "%~1"=="" set "LOCAL_PY=%~1"
+if not defined LOCAL_PY if exist python-path.txt set /p LOCAL_PY=<python-path.txt
+if defined LOCAL_PY (
+  if exist "!LOCAL_PY!\python.exe" set "LOCAL_PY=!LOCAL_PY!\python.exe"
+  if not exist "!LOCAL_PY!" (echo 找不到 Python：!LOCAL_PY! & pause & exit /b 1)
+  "!LOCAL_PY!" -c "import sys; sys.exit(0 if (3,10) <= sys.version_info[:2] <= (3,11) else 1)"
+  if errorlevel 1 (
+    "!LOCAL_PY!" --version
+    echo IndexTTS 只支持 Python 3.10 或 3.11，这个 Python 不能用。不带参数运行 setup.bat 会自动下载合适的版本。
+    pause & exit /b 1
+  )
+  >python-path.txt echo !LOCAL_PY!
+  set "UV_PYTHON=!LOCAL_PY!"
+  echo 使用本机 Python：!LOCAL_PY!
+)
+
 where git >nul 2>nul || (echo 未找到 git，请先安装：https://git-scm.com/downloads & pause & exit /b 1)
 
 echo [1/5] 检查 uv（需要 0.9 或更新版本）...
@@ -33,8 +52,12 @@ if not exist index-tts (
 )
 cd index-tts
 
-echo [3/5] 安装 Python（版本见 .python-version）...
-"!UV!" python install
+if defined UV_PYTHON (
+  echo [3/5] 使用本机 Python，跳过下载
+) else (
+  echo [3/5] 安装 Python（版本见 .python-version）...
+  "!UV!" python install
+)
 if errorlevel 1 (
   echo 从 GitHub 下载 Python 失败，改用国内镜像重试 ...
   set "UV_PYTHON_INSTALL_MIRROR=%PY_MIRROR%"

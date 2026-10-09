@@ -4,3 +4,5 @@
 /voices/*
 !/voices/.gitkeep
 __pycache__/
+# setup.bat 记录的本机 Python 路径
+/python-path.txt
