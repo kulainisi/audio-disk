@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>MiniMax 语音合成</title>
+<title>IndexTTS 本地配音</title>
 <style>
   :root { --bg: #f6f7f9; --card: #fff; --text: #1d2129; --muted: #6b7280; --border: #e5e7eb; --accent: #2563eb; --error: #dc2626; }
   @media (prefers-color-scheme: dark) {
@@ -11,104 +11,133 @@
   }
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.6 system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; }
-  main { max-width: 760px; margin: 0 auto; padding: 24px 16px 48px; }
+  main { max-width: 780px; margin: 0 auto; padding: 24px 16px 48px; }
   h1 { font-size: 22px; margin: 0 0 4px; }
+  h2 { font-size: 14px; margin: 20px 0 8px; color: var(--muted); font-weight: 600; }
   .sub { color: var(--muted); margin: 0 0 20px; font-size: 13px; }
   .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
   label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 4px; }
   textarea, input, select { width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); color: var(--text); font: inherit; }
-  textarea { min-height: 160px; resize: vertical; }
-  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; margin-top: 12px; }
-  .row { display: flex; justify-content: space-between; align-items: center; margin-top: 4px; font-size: 12px; color: var(--muted); }
-  button { margin-top: 16px; width: 100%; padding: 10px; border: 0; border-radius: 8px; background: var(--accent); color: #fff; font: inherit; font-weight: 600; cursor: pointer; }
+  input[type=range] { padding: 0; }
+  input[type=checkbox] { width: auto; }
+  textarea { min-height: 180px; resize: vertical; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 12px; }
+  .row { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 4px; font-size: 12px; color: var(--muted); }
+  .inline { display: flex; gap: 8px; align-items: center; }
+  .inline select { flex: 1; }
+  .hint { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  button { padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--card); color: var(--text); font: inherit; cursor: pointer; white-space: nowrap; }
+  #go { margin-top: 20px; width: 100%; padding: 10px; border: 0; background: var(--accent); color: #fff; font-weight: 600; }
   button:disabled { opacity: .6; cursor: progress; }
   #result { margin-top: 16px; }
   #result audio { width: 100%; }
   .meta { font-size: 12px; color: var(--muted); margin-top: 6px; }
   .error { color: var(--error); white-space: pre-wrap; }
   a { color: var(--accent); }
+  details { margin-top: 16px; }
+  summary { cursor: pointer; color: var(--muted); font-size: 13px; }
   [hidden] { display: none !important; }
 </style>
 </head>
 <body>
 <main>
-  <h1>MiniMax 语音合成</h1>
-  <p class="sub" id="providers">加载中…</p>
+  <h1>IndexTTS 本地配音</h1>
+  <p class="sub" id="status">正在连接本地服务…</p>
 
   <div class="card">
     <label for="text">文本</label>
-    <textarea id="text" placeholder="输入要合成的文字">你好，欢迎使用 MiniMax 语音合成服务。</textarea>
-    <div class="row"><span>支持 &lt;#0.5#&gt; 形式的停顿标记（单位：秒）</span><span id="count">0</span></div>
+    <textarea id="text" placeholder="输入要合成的文字">夜深了，你还没睡吗？……嗯，我也是。那就再陪我说一会儿话吧。</textarea>
+    <div class="row"><span>多音字可写成 &lt;行|HANG2&gt;；长文本会自动分段</span><span id="count">0</span></div>
 
+    <h2>音色</h2>
     <div class="grid">
-      <div>
-        <label for="voice_id">音色 ID</label>
-        <input id="voice_id" list="voices" value="male-qn-qingse">
-        <datalist id="voices">
-          <option value="male-qn-qingse">青涩青年</option>
-          <option value="male-qn-jingying">精英青年</option>
-          <option value="male-qn-badao">霸道青年</option>
-          <option value="male-qn-daxuesheng">青年大学生</option>
-          <option value="female-shaonv">少女</option>
-          <option value="female-yujie">御姐</option>
-          <option value="female-chengshu">成熟女性</option>
-          <option value="female-tianmei">甜美女性</option>
-          <option value="presenter_male">男性主持人</option>
-          <option value="presenter_female">女性主持人</option>
-          <option value="audiobook_male_1">男性有声书 1</option>
-          <option value="audiobook_female_1">女性有声书 1</option>
-        </datalist>
+      <div style="grid-column: 1 / -1">
+        <label for="voice">音色参考音频（声音会模仿这段录音）</label>
+        <div class="inline">
+          <select id="voice"></select>
+          <button id="preview" type="button">试听</button>
+          <button id="uploadBtn" type="button">上传</button>
+          <input id="upload" type="file" accept=".wav,.mp3,.flac,.ogg,.m4a" hidden>
+        </div>
+        <div class="hint">建议 5–15 秒、无背景音乐和杂音的干净人声。录音里带什么样的语气和气息，生成的声音就会带什么样的。</div>
+        <audio id="previewAudio" hidden></audio>
       </div>
       <div>
-        <label for="emotion">情绪</label>
-        <select id="emotion">
-          <option value="">自动</option>
-          <option value="happy">高兴</option>
-          <option value="sad">悲伤</option>
-          <option value="angry">愤怒</option>
-          <option value="fearful">害怕</option>
-          <option value="disgusted">厌恶</option>
-          <option value="surprised">惊讶</option>
-          <option value="calm">平静</option>
+        <label for="lang">语言</label>
+        <select id="lang">
+          <option value="ZH">中文</option>
+          <option value="EN">英语</option>
+          <option value="JA">日语</option>
+          <option value="ES">西班牙语</option>
+          <option value="AR">阿拉伯语</option>
         </select>
       </div>
       <div>
-        <label for="language_boost">语种增强</label>
-        <select id="language_boost">
-          <option value="auto">自动</option>
-          <option value="Chinese">中文</option>
-          <option value="Chinese,Yue">粤语</option>
-          <option value="English">英语</option>
-          <option value="Japanese">日语</option>
-          <option value="Korean">韩语</option>
-          <option value="">不设置</option>
-        </select>
-      </div>
-      <div>
-        <label for="speed">语速 <span id="speed_v">1.0</span></label>
-        <input id="speed" type="range" min="0.5" max="2" step="0.1" value="1">
-      </div>
-      <div>
-        <label for="vol">音量 <span id="vol_v">1.0</span></label>
-        <input id="vol" type="range" min="0.1" max="10" step="0.1" value="1">
-      </div>
-      <div>
-        <label for="pitch">音调 <span id="pitch_v">0</span></label>
-        <input id="pitch" type="range" min="-12" max="12" step="1" value="0">
-      </div>
-      <div>
-        <label for="format">格式</label>
-        <select id="format">
-          <option>mp3</option>
-          <option>wav</option>
-          <option>flac</option>
-        </select>
-      </div>
-      <div id="tokenBox" hidden>
-        <label for="token">访问密码</label>
-        <input id="token" type="password" autocomplete="current-password">
+        <label for="duration_factor">语速 <span id="duration_factor_v"></span></label>
+        <input id="duration_factor" type="range" min="0.5" max="2" step="0.05" value="1">
+        <div class="hint">往右越慢，往左越快</div>
       </div>
     </div>
+
+    <h2>情感</h2>
+    <div class="grid">
+      <div>
+        <label for="emo_mode">控制方式</label>
+        <select id="emo_mode">
+          <option value="none">跟随音色参考音频</option>
+          <option value="audio">使用情感参考音频</option>
+          <option value="vector">手动调节情感</option>
+          <option value="text">用文字描述情感</option>
+        </select>
+      </div>
+      <div id="alphaBox" hidden>
+        <label for="emo_alpha">情感强度 <span id="emo_alpha_v"></span></label>
+        <input id="emo_alpha" type="range" min="0" max="1" step="0.05" value="0.65">
+      </div>
+      <div id="emoVoiceBox" hidden style="grid-column: 1 / -1">
+        <label for="emo_voice">情感参考音频（只学语气，不学音色）</label>
+        <select id="emo_voice"></select>
+      </div>
+      <div id="emoTextBox" hidden style="grid-column: 1 / -1">
+        <label for="emo_text">情感描述（留空则根据正文自动判断）</label>
+        <input id="emo_text" placeholder="例如：温柔地、带点慵懒地低声说">
+      </div>
+    </div>
+    <div id="vectorBox" class="grid" hidden style="margin-top: 12px"></div>
+
+    <details>
+      <summary>高级设置</summary>
+      <div class="grid" style="margin-top: 12px">
+        <div>
+          <label for="temperature">temperature <span id="temperature_v"></span></label>
+          <input id="temperature" type="range" min="0.1" max="1.5" step="0.05" value="0.8">
+        </div>
+        <div>
+          <label for="top_p">top_p <span id="top_p_v"></span></label>
+          <input id="top_p" type="range" min="0.1" max="1" step="0.05" value="0.8">
+        </div>
+        <div>
+          <label for="top_k">top_k <span id="top_k_v"></span></label>
+          <input id="top_k" type="range" min="0" max="100" step="1" value="30">
+        </div>
+        <div>
+          <label for="repetition_penalty">repetition_penalty <span id="repetition_penalty_v"></span></label>
+          <input id="repetition_penalty" type="range" min="1" max="20" step="0.5" value="10">
+        </div>
+        <div>
+          <label for="interval_silence">分段间停顿 <span id="interval_silence_v"></span> ms</label>
+          <input id="interval_silence" type="range" min="0" max="1000" step="50" value="200">
+        </div>
+        <div>
+          <label><input id="use_random" type="checkbox"> 情感随机采样</label>
+          <div class="hint">关闭时同一段文字每次更稳定，适合长篇</div>
+        </div>
+        <div id="tokenBox" hidden>
+          <label for="token">访问密码</label>
+          <input id="token" type="password" autocomplete="current-password">
+        </div>
+      </div>
+    </details>
 
     <button id="go">生成语音</button>
     <div id="result"></div>
@@ -117,50 +146,129 @@
 
 <script>
   const $ = (id) => document.getElementById(id);
-  const LABELS = { intl: "国际站", cn: "国内站" };
+  const EMO_LABELS = { happy: "开心", angry: "生气", sad: "悲伤", afraid: "害怕", disgusted: "厌恶", melancholic: "低落", surprised: "惊讶", calm: "平静" };
+  const SLIDERS = ["duration_factor", "emo_alpha", "temperature", "top_p", "top_k", "repetition_penalty", "interval_silence"];
+  let config = { emotions: [], voices: [] };
 
-  try { $("token").value = localStorage.getItem("tts_token") || ""; } catch {}
+  const store = {
+    get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+    set(k, v) { try { localStorage.setItem(k, v); } catch {} },
+  };
+  $("token").value = store.get("tts_token") || "";
+  const authHeaders = () => ($("token").value ? { Authorization: "Bearer " + $("token").value } : {});
 
-  fetch("/api/config").then((r) => r.json()).then((cfg) => {
-    $("providers").textContent = cfg.providers.length
-      ? "模型：" + cfg.model + " · 调用顺序：" + cfg.providers.map((p) => LABELS[p] || p).join(" → ")
-      : "服务端尚未配置 API Key";
-    $("tokenBox").hidden = !cfg.requireToken;
-    $("text").maxLength = cfg.maxTextLength;
-  }).catch(() => { $("providers").textContent = "无法读取服务配置"; });
-
-  const updateCount = () => { $("count").textContent = $("text").value.length + " 字"; };
-  $("text").addEventListener("input", updateCount);
-  updateCount();
-
-  for (const id of ["speed", "vol", "pitch"]) {
+  for (const id of SLIDERS) {
     const sync = () => { $(id + "_v").textContent = $(id).value; };
     $(id).addEventListener("input", sync);
     sync();
   }
+  const updateCount = () => { $("count").textContent = $("text").value.length + " 字"; };
+  $("text").addEventListener("input", updateCount);
+  updateCount();
+
+  function fillVoices(selected) {
+    for (const sel of [$("voice"), $("emo_voice")]) {
+      const keep = sel === $("voice") ? (selected || sel.value || store.get("tts_voice")) : sel.value;
+      sel.innerHTML = "";
+      for (const v of config.voices) sel.append(new Option(v, v));
+      if (keep && config.voices.includes(keep)) sel.value = keep;
+    }
+  }
+
+  async function loadConfig(selected) {
+    const resp = await fetch("/api/config");
+    config = await resp.json();
+    $("status").textContent = `${config.model} · ${config.gpu || "CPU（很慢）"}` + (config.bf16 ? " · BF16" : "");
+    $("tokenBox").hidden = !config.requireToken;
+    $("text").maxLength = config.maxTextLength;
+    if (!config.qwenEmo) $("emo_mode").querySelector('option[value="text"]').disabled = true;
+    if (!$("vectorBox").children.length) {
+      for (const e of config.emotions) {
+        const div = document.createElement("div");
+        div.innerHTML = `<label>${EMO_LABELS[e] || e} <span>0</span></label><input type="range" min="0" max="1" step="0.05" value="0" data-emo="${e}">`;
+        const input = div.querySelector("input");
+        input.addEventListener("input", () => { div.querySelector("span").textContent = input.value; });
+        $("vectorBox").append(div);
+      }
+    }
+    fillVoices(selected);
+  }
+  loadConfig().catch(() => { $("status").textContent = "无法连接本地服务，请确认 start.bat 窗口仍在运行"; });
+
+  function updateEmoMode() {
+    const mode = $("emo_mode").value;
+    $("emoVoiceBox").hidden = mode !== "audio";
+    $("emoTextBox").hidden = mode !== "text";
+    $("vectorBox").hidden = mode !== "vector";
+    $("alphaBox").hidden = !(mode === "audio" || mode === "text");
+  }
+  $("emo_mode").addEventListener("change", updateEmoMode);
+  updateEmoMode();
+
+  $("preview").addEventListener("click", () => {
+    // 试听用的是上传/示例原始文件，由服务端按名称提供
+    const a = $("previewAudio");
+    a.src = "/api/voices/" + encodeURIComponent($("voice").value) + "?token=" + encodeURIComponent($("token").value);
+    a.play().catch(() => {});
+  });
+
+  $("uploadBtn").addEventListener("click", () => $("upload").click());
+  $("upload").addEventListener("change", async () => {
+    const file = $("upload").files[0];
+    if (!file) return;
+    const form = new FormData();
+    form.append("file", file);
+    $("uploadBtn").disabled = true;
+    try {
+      const resp = await fetch("/api/voices", { method: "POST", headers: authHeaders(), body: form });
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(data.error || "上传失败");
+      await loadConfig(data.name);
+    } catch (e) {
+      alert(e.message);
+    } finally {
+      $("uploadBtn").disabled = false;
+      $("upload").value = "";
+    }
+  });
 
   let lastUrl = null;
-
   $("go").addEventListener("click", async () => {
-    const body = {};
-    for (const id of ["text", "voice_id", "emotion", "language_boost", "speed", "vol", "pitch", "format"]) {
-      body[id] = $(id).value;
-    }
-    const token = $("token").value;
-    try { localStorage.setItem("tts_token", token); } catch {}
+    const mode = $("emo_mode").value;
+    const body = {
+      text: $("text").value,
+      voice: $("voice").value,
+      lang: $("lang").value,
+      duration_factor: Number($("duration_factor").value),
+      emo_mode: mode,
+      emo_alpha: Number($("emo_alpha").value),
+      use_random: $("use_random").checked,
+      temperature: Number($("temperature").value),
+      top_p: Number($("top_p").value),
+      top_k: Number($("top_k").value),
+      repetition_penalty: Number($("repetition_penalty").value),
+      interval_silence: Number($("interval_silence").value),
+    };
+    if (mode === "audio") body.emo_voice = $("emo_voice").value;
+    if (mode === "text") body.emo_text = $("emo_text").value;
+    if (mode === "vector") body.emo_vector = [...$("vectorBox").querySelectorAll("input")].map((i) => Number(i.value));
+    store.set("tts_token", $("token").value);
+    store.set("tts_voice", body.voice);
 
     $("go").disabled = true;
-    $("go").textContent = "生成中…";
+    const started = Date.now();
+    const timer = setInterval(() => { $("go").textContent = `生成中… ${Math.round((Date.now() - started) / 1000)} 秒`; }, 500);
     $("result").innerHTML = "";
     try {
       const resp = await fetch("/api/tts", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...(token ? { Authorization: "Bearer " + token } : {}) },
+        headers: { "Content-Type": "application/json", ...authHeaders() },
         body: JSON.stringify(body),
       });
       if (!resp.ok) {
         const err = await resp.json().catch(() => ({ error: "HTTP " + resp.status }));
-        throw new Error([err.error, ...(err.details || [])].join("\n"));
+        const detail = Array.isArray(err.detail) ? err.detail.map((d) => d.msg).join("\n") : "";
+        throw new Error(err.error || detail || "HTTP " + resp.status);
       }
       const blob = await resp.blob();
       if (lastUrl) URL.revokeObjectURL(lastUrl);
@@ -171,19 +279,12 @@
       audio.src = lastUrl;
       const link = document.createElement("a");
       link.href = lastUrl;
-      link.download = "tts." + body.format;
-      link.textContent = "下载音频";
+      link.download = `tts_${new Date().toISOString().replace(/\D/g, "").slice(0, 14)}.wav`;
+      link.textContent = "下载 WAV";
       const meta = document.createElement("div");
       meta.className = "meta";
-      const provider = resp.headers.get("X-TTS-Provider");
-      const ms = Number(resp.headers.get("X-TTS-Audio-Length-Ms"));
-      const chars = resp.headers.get("X-TTS-Usage-Characters");
-      meta.append(
-        `${LABELS[provider] || provider || ""}` +
-        (ms ? ` · 时长 ${(ms / 1000).toFixed(1)} 秒` : "") +
-        (chars ? ` · 计费 ${chars} 字符` : "") + " · ",
-        link
-      );
+      const secs = resp.headers.get("X-TTS-Elapsed-Seconds");
+      meta.append(secs ? `耗时 ${secs} 秒 · ` : "", link);
       $("result").append(audio, meta);
       audio.play().catch(() => {});
     } catch (e) {
@@ -192,6 +293,7 @@
       div.textContent = e.message;
       $("result").append(div);
     } finally {
+      clearInterval(timer);
       $("go").disabled = false;
       $("go").textContent = "生成语音";
     }

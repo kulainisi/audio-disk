@@ -1,76 +1,82 @@
-# audio-disk — MiniMax 语音合成服务
+# audio-disk — IndexTTS-2.5 本地配音
 
-一个零依赖的 Node.js 小服务，固定使用 **speech-2.8-hd** 模型，用来调用 [MiniMax 同步语音合成接口 (T2A v2)](https://platform.minimaxi.com/docs/api-reference/speech-t2a-http)。服务自带网页：输入文字、选择音色，就能直接播放或下载音频。
+在自己电脑的显卡上运行 B 站开源的 [IndexTTS-2.5](https://github.com/index-tts/index-tts)，提供一个简洁的网页和 HTTP 接口：
 
-- **优先国际站，回退国内站**：配置了国际站 Key 时先调用 `api.minimax.io`，失败后自动改调国内站 `api.minimaxi.com`。只配置一个站点时只调用该站点。
-- **API Key 只保存在服务端**，浏览器拿不到。
-- 可以设置 **访问密码**（`ACCESS_TOKEN`），防止别人盗用你的额度。
+- **音色克隆**：给一段 5–15 秒的参考录音，生成的声音就会模仿它，包括语气和气息。
+- **情感控制**：可以跟随参考录音，也可以用另一段录音指定情感、手动调节 8 种情感强度，或者用文字描述情感（例如“温柔地低声说”）。
+- **语速、多音字控制**：语速 0.5–2 倍可调；多音字写成 `<行|HANG2>` 即可指定读音。
+- **长文本**：自动分段合成，生成完整的一段音频。
+- 纯本地运行，不需要 API Key，不按字数收费。
 
-## 配置
+## 硬件要求
 
-| 环境变量 | 说明 |
-| --- | --- |
-| `MINIMAX_INTL_API_KEY` | 国际站 API Key（可选） |
-| `MINIMAX_CN_API_KEY` | 国内站 API Key（可选） |
-| `MINIMAX_INTL_GROUP_ID` / `MINIMAX_CN_GROUP_ID` | 旧版账号需要 GroupId 时填写（可选） |
-| `ACCESS_TOKEN` | 访问密码，强烈建议公网部署时设置 |
-| `MINIMAX_MODEL` | 语音模型，默认 `speech-2.8-hd` |
-| `PORT` | 监听端口，默认 `3000` |
+- NVIDIA 显卡，显存 8GB 以上（RTX 3060 12GB 可以全精度运行；8GB 版本会自动切换为 BF16 半精度，并关闭“文字描述情感”功能以节省显存）。
+- 磁盘空间 15GB 以上（依赖约 5GB，模型约 6GB）。
+- 如果安装时报 CUDA 相关错误，请安装 [CUDA Toolkit 12.8](https://developer.nvidia.com/cuda-toolkit) 或更新版本，并更新显卡驱动。
 
-两个 API Key 至少要配置一个。可以直接写在项目目录下的 `.env` 文件里（服务启动时自动读取），完整示例见 `.env.example`。
+## 安装（Windows）
 
-> speech-2.8-hd 是 MiniMax 的闭源模型，只能通过 API 调用，音频在 MiniMax 的服务器上生成。本服务在本地只负责转发请求，不需要显卡，普通电脑就能运行。
+1. 安装 [Git](https://git-scm.com/downloads)。
+2. 下载本仓库，双击 **`setup.bat`**。它会依次：
+   - 安装 `uv`（第一次安装后需要关闭窗口、重新双击 setup.bat）；
+   - 把 IndexTTS 代码下载到 `index-tts/` 目录；
+   - 安装依赖（使用阿里云 PyPI 镜像）；
+   - 从 ModelScope 下载 IndexTTS-2.5 模型到 `index-tts/checkpoints/`；
+   - 检查显卡是否可用。
+3. 双击 **`start.bat`**。模型加载大约需要 1–2 分钟，完成后会自动打开浏览器，地址是 http://127.0.0.1:8000 。
 
-## 本地运行
+Linux 下对应的是 `./setup.sh` 和 `./start.sh`。
 
-需要 Node.js 18 或更高版本。
+> 第一次启动时，IndexTTS 还会自动下载几个小模型。启动脚本已默认使用 `hf-mirror.com` 镜像，如需改回官方源，先设置环境变量 `HF_ENDPOINT=https://huggingface.co`。
 
-### Windows（双击运行）
+## 让声音更自然的建议
 
-1. 从 https://nodejs.org 安装 Node.js（LTS 版本）。
-2. 下载本仓库代码，双击 `start.bat`。第一次运行会生成 `.env` 并用记事本打开，填好 API Key 后保存。
-3. 再次双击 `start.bat`，浏览器会自动打开 http://localhost:3000 。
+- **参考录音最重要**：用干净的人声（无背景音乐、无回声），5–15 秒，语气就是你想要的语气。想要带气息、轻声的效果，参考录音本身就要是那样说话的。
+- 把常用的参考录音放进 `voices/` 文件夹，或者在网页上点“上传”，以后就能直接从列表里选择。
+- 录长篇（有声书、长段旁白）时，固定使用同一段参考录音，并保持“情感随机采样”关闭，前后音色会更一致。
+- 情感强度不要拉满。用“文字描述情感”时，官方建议强度在 0.6 左右或更低。
 
-### 命令行
+## 启动参数
 
-```bash
-MINIMAX_CN_API_KEY=你的Key ACCESS_TOKEN=自定义密码 npm start
-# 浏览器打开 http://localhost:3000
 ```
+start.bat [参数]
 
-## 部署
-
-### Docker（任意云服务器，包括阿里云/腾讯云）
-
-```bash
-docker build -t audio-disk .
-docker run -d --name audio-disk -p 3000:3000 --restart unless-stopped \
-  -e MINIMAX_INTL_API_KEY=国际站Key \
-  -e MINIMAX_CN_API_KEY=国内站Key \
-  -e ACCESS_TOKEN=自定义密码 \
-  audio-disk
+--host 0.0.0.0     允许局域网内其他设备访问（默认只允许本机）
+--port 8000        端口
+--token 密码       设置访问密码（也可以用环境变量 ACCESS_TOKEN）
+--bf16 / --fp32    强制半精度 / 全精度（默认按显存自动选择）
+--qwen_emo         显存不足 10GB 时也启用“文字描述情感”
+--no_qwen_emo      不启用“文字描述情感”，节省显存
 ```
-
-### Render / Railway / Zeabur / Fly.io 等平台
-
-连接本仓库后选择 Dockerfile 部署（或使用 Node 环境，启动命令为 `npm start`），然后在平台后台填写上面的环境变量。
-
-> 提示：服务部署在海外时，访问国际站更快；部署在国内时，访问国内站更稳定。如果你的服务器在国内、但又想优先使用国际站，请先确认服务器能访问 `api.minimax.io`。
 
 ## 接口
 
-`POST /api/tts`。设置了访问密码时，需要带请求头 `Authorization: Bearer <ACCESS_TOKEN>`。
+`POST /api/tts`，返回 WAV 音频。设置了访问密码时，需要带请求头 `Authorization: Bearer <密码>`。
 
 ```bash
-curl -X POST http://localhost:3000/api/tts \
-  -H "Authorization: Bearer 自定义密码" \
+curl -X POST http://127.0.0.1:8000/api/tts \
   -H "Content-Type: application/json" \
-  -d '{"text":"你好，世界","voice_id":"female-shaonv","format":"mp3"}' \
-  -o out.mp3
+  -d '{"text":"你好，世界","voice":"我的声音.wav","emo_mode":"vector","emo_vector":[0.6,0,0,0,0,0,0,0]}' \
+  -o out.wav
 ```
 
-请求字段（只有 `text` 必填）：`text`、`voice_id`、`speed`、`vol`、`pitch`、`emotion`、`language_boost`、`format`（`mp3` / `wav` / `flac` / `pcm`）、`sample_rate`、`bitrate`、`channel`。
+| 字段 | 说明 |
+| --- | --- |
+| `text` | 要合成的文字（必填） |
+| `voice` | 音色参考音频名称（必填），可用名称见 `GET /api/config` 返回的 `voices` |
+| `lang` | `ZH` / `EN` / `JA` / `ES` / `AR`，默认 `ZH` |
+| `duration_factor` | 时长倍数 0.5–2，大于 1 变慢，默认 1 |
+| `emo_mode` | `none` 跟随参考音频（默认）/ `audio` 情感参考音频 / `vector` 情感向量 / `text` 文字描述情感 |
+| `emo_voice` | `emo_mode=audio` 时使用的情感参考音频名称 |
+| `emo_vector` | `emo_mode=vector` 时的 8 个数值（0–1），顺序：开心、生气、悲伤、害怕、厌恶、低落、惊讶、平静 |
+| `emo_text` | `emo_mode=text` 时的情感描述，留空则根据正文判断 |
+| `emo_alpha` | 情感强度 0–1，用于 `audio` 和 `text` 模式 |
+| `use_random` | 情感随机采样，默认 `false` |
+| `interval_silence` | 分段之间的停顿（毫秒），默认 200 |
+| `temperature` / `top_p` / `top_k` / `repetition_penalty` | 采样参数，不填则使用 IndexTTS 的默认值 |
 
-调用成功时直接返回音频二进制，响应头 `X-TTS-Provider` 表示实际使用的站点（`intl` 或 `cn`）。调用失败时返回 JSON，`details` 里列出每个站点的错误信息。
+其他接口：`GET /api/config`（配置和音色列表）、`POST /api/voices`（上传参考音频，表单字段 `file`）、`GET /api/voices/<名称>`（下载参考音频）、`GET /healthz`。
 
-其他接口：`GET /api/config`（返回已启用的站点等配置信息）、`GET /healthz`（健康检查）。
+## 许可证
+
+IndexTTS 的代码和模型使用 bilibili 的自定义许可证，（bilibili Model Use License Agreement），商用前请阅读 `index-tts/LICENSE_ZH.txt`。

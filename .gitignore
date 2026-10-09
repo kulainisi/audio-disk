@@ -1,2 +1,6 @@
-node_modules
-.env
+# IndexTTS 代码和模型由 setup 脚本下载，不提交
+/index-tts/
+# 自己的音色参考音频
+/voices/*
+!/voices/.gitkeep
+__pycache__/
