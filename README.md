@@ -79,4 +79,4 @@ curl -X POST http://127.0.0.1:8000/api/tts \
 
 ## 许可证
 
-IndexTTS 的代码和模型使用 bilibili 的自定义许可证，（bilibili Model Use License Agreement），商用前请阅读 `index-tts/LICENSE_ZH.txt`。
+IndexTTS 的代码和模型使用 bilibili 的自定义许可证（bilibili Model Use License Agreement），商用前请阅读 `index-tts/LICENSE_ZH.txt`。
