@@ -7,9 +7,22 @@ const fs = require("node:fs");
 const path = require("node:path");
 const crypto = require("node:crypto");
 
+// 如果项目目录下有 .env 文件，就读取其中的配置（已存在的环境变量优先）。
+function loadEnvFile(file) {
+  if (!fs.existsSync(file)) return;
+  for (const line of fs.readFileSync(file, "utf8").split(/\r?\n/)) {
+    const m = line.match(/^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*?)\s*$/);
+    if (!m || process.env[m[1]] !== undefined) continue;
+    process.env[m[1]] = m[2].replace(/^(["'])(.*)\1$/, "$2");
+  }
+}
+loadEnvFile(path.join(__dirname, ".env"));
+
 const PORT = Number(process.env.PORT) || 3000;
 const ACCESS_TOKEN = process.env.ACCESS_TOKEN || "";
 const MAX_TEXT_LENGTH = 10000;
+// 固定使用的语音模型，前端无法修改。
+const MODEL = process.env.MINIMAX_MODEL || "speech-2.8-hd";
 const UPSTREAM_TIMEOUT_MS = Number(process.env.UPSTREAM_TIMEOUT_MS) || 120000;
 
 // 按优先级排列：国际站在前，国内站在后。只启用配置了 API Key 的站点。
@@ -105,7 +118,7 @@ function buildPayload(input) {
   if (input.emotion) voiceSetting.emotion = input.emotion;
 
   const payload = {
-    model: input.model || "speech-2.6-hd",
+    model: MODEL,
     text,
     stream: false,
     voice_setting: voiceSetting,
@@ -215,6 +228,7 @@ const server = http.createServer(async (req, res) => {
     if (pathname === "/api/config" && req.method === "GET") {
       return sendJson(res, 200, {
         providers: PROVIDERS.map((p) => p.name),
+        model: MODEL,
         requireToken: Boolean(ACCESS_TOKEN),
         maxTextLength: MAX_TEXT_LENGTH,
       });
@@ -232,5 +246,6 @@ server.listen(PORT, () => {
   const order = PROVIDERS.map((p) => `${p.label}(${p.baseUrl})`).join(" -> ") || "无（未配置 API Key）";
   console.log(`MiniMax TTS 服务已启动：http://localhost:${PORT}`);
   console.log(`调用顺序：${order}`);
+  console.log(`语音模型：${MODEL}`);
   if (!ACCESS_TOKEN) console.log("提示：未设置 ACCESS_TOKEN，任何人都可以调用本服务。");
 });

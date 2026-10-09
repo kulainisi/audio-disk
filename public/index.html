@@ -42,17 +42,6 @@
 
     <div class="grid">
       <div>
-        <label for="model">模型</label>
-        <select id="model">
-          <option>speech-2.6-hd</option>
-          <option>speech-2.6-turbo</option>
-          <option>speech-02-hd</option>
-          <option>speech-02-turbo</option>
-          <option>speech-01-hd</option>
-          <option>speech-01-turbo</option>
-        </select>
-      </div>
-      <div>
         <label for="voice_id">音色 ID</label>
         <input id="voice_id" list="voices" value="male-qn-qingse">
         <datalist id="voices">
@@ -134,7 +123,7 @@
 
   fetch("/api/config").then((r) => r.json()).then((cfg) => {
     $("providers").textContent = cfg.providers.length
-      ? "调用顺序：" + cfg.providers.map((p) => LABELS[p] || p).join(" → ")
+      ? "模型：" + cfg.model + " · 调用顺序：" + cfg.providers.map((p) => LABELS[p] || p).join(" → ")
       : "服务端尚未配置 API Key";
     $("tokenBox").hidden = !cfg.requireToken;
     $("text").maxLength = cfg.maxTextLength;
@@ -154,7 +143,7 @@
 
   $("go").addEventListener("click", async () => {
     const body = {};
-    for (const id of ["text", "model", "voice_id", "emotion", "language_boost", "speed", "vol", "pitch", "format"]) {
+    for (const id of ["text", "voice_id", "emotion", "language_boost", "speed", "vol", "pitch", "format"]) {
       body[id] = $(id).value;
     }
     const token = $("token").value;
