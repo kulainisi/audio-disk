@@ -1,0 +1,13 @@
+{
+  "name": "audio-disk",
+  "version": "1.0.0",
+  "private": true,
+  "description": "MiniMax 语音合成 (T2A v2) 代理服务，优先国际站，回退国内站",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
